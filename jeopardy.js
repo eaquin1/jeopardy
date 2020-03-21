@@ -22,6 +22,8 @@
 //Clues: http://jservice.io/api/clues?category=11544
 
 let categories = [];
+const NUM_CATEGORIES = 6;
+const NUM_CLUES = 5;
 
 /** Get NUM_CATEGORIES random category from API.
  *
@@ -32,13 +34,12 @@ async function getCategoryIds() {
     let random = Math.floor(Math.random() * 999);
     let res = await axios.get(`http://jservice.io/api/categories?count=100&offset=${random}`);
     
-    let categories = res.data.map(result => ({
-        id: result.id,
-        title: result.title
-    }))
-    let randomCategories = _.sampleSize(categories, 6);
+    let randomCategories = res.data.map(result => (
+        result['id']
+    ))
+    let sampleCategories = _.sampleSize(randomCategories, NUM_CATEGORIES);
    
-    return randomCategories
+    return sampleCategories;
 }
 
 /** Return object with data about a category:
@@ -55,19 +56,23 @@ async function getCategoryIds() {
 
 async function getCategory(catId) {
     let res = await axios.get(`http://jservice.io/api/clues?category=${catId}`);
-   
+    let catObj = {};
+    
     let clueArray = res.data.map(result => ({
         question: result.question,
         answer: result.answer,
         showing: null
     }))
-   let sampleClueArray = _.sampleSize(clueArray, 5);
- 
-    return {
-        title: res.data[0].category.title,
-        clues: sampleClueArray
-    }
+    
+    let sampleClueArray = _.sampleSize(clueArray, NUM_CLUES);
+    catObj = {
+            title: res.data[0].category.title,
+            clues: sampleClueArray
+        }
+        
+    return catObj;
 }
+    
 
 /** Fill the HTML table#jeopardy with the categories & cells for questions.
  *
@@ -77,26 +82,35 @@ async function getCategory(catId) {
  *   (initally, just show a "?" where the question/answer would go.)
  */
 
-function fillTable() {
+async function fillTable() {
     const $jeopardy = $("#jeopardy");
     const $thead = $jeopardy.children('thead');
+    const $tbody = $jeopardy.children('tbody');
     $thead.empty();
-    let $headerRow = $thead.append('<tr>')
+    $tbody.empty();
+
+    let $headerRow = $('<tr>');
+    
     for (let category of categories) {
         let $header = $(
             `<th>${category.title}</th>`
         );
         $headerRow.append($header);
     }
+    $thead.append($headerRow);
+
     
-// /* <tbody>
-        //     <td id="0-0">?</td>
-        //     <td id="1-0">?</td>
-        //     <td id="2-0">?</td>
-        //     <td id="3-0">?</td>
-        //     <td id="4-0">?</td>
-        //     <td id="5-0">?</td>
-        // </tbody> */
+    for(let x = 0; x < NUM_CLUES; x++){
+        let $clueRow = $('<tr>');
+         for(let y = 0; y < NUM_CATEGORIES; y++) {
+            let $row = $(
+                `<td id="${y}-${x}">?</td>`
+            )
+            $clueRow.append($row);
+        }
+        $tbody.append($clueRow);
+    }
+    
 }
 
 /** Handle clicking on a clue: show the question or answer.
@@ -108,6 +122,23 @@ function fillTable() {
  * */
 
 function handleClick(evt) {
+    evt.preventDefault();
+    let id = evt.target.id;
+    let $clue = $(evt.target)
+    let selectedCat = parseInt(id.slice(0, 1));
+    let selectedQuestion = parseInt(id.slice(2));
+   
+    let showing =  categories[selectedCat].clues[selectedQuestion].showing;
+   
+    if(!showing){
+        $clue.text(categories[selectedCat].clues[selectedQuestion].question);
+        categories[selectedCat].clues[selectedQuestion]["showing"] = "question";
+    } else if (showing === "question") {
+       $clue.text(categories[selectedCat].clues[selectedQuestion].answer);
+       categories[selectedCat].clues[selectedQuestion]["showing"] = "answer";
+    } else {
+        return;
+    }
 }
 
 /** Start game:
@@ -118,6 +149,12 @@ function handleClick(evt) {
  * */
 
 async function setupAndStart() {
+    let getCatIds = await getCategoryIds();
+    for (let id of getCatIds) {
+        categories.push(await getCategory(id));
+    }
+    
+    fillTable();
 }
 
 /** On click of restart button, restart game. */
@@ -126,44 +163,6 @@ $('#restart').on('click', setupAndStart());
 
 
 /** On page load, setup and start & add event handler for clicking clues */
-
-// TODO
-
-// categories = [
-//     { title: "Math",
-//       clues: [
-//         {question: "2+2", answer: 4, showing: null},
-//         {question: "1+1", answer: 2, showing: null}
-//       ],
-//     },
-//     { title: "Literature",
-//       clues: [
-//         {question: "Hamlet Author", answer: "Shakespeare", showing: null},
-//         {question: "Bell Jar Author", answer: "Plath", showing: null}
-//       ],
-//     },
-//     { title: "Cats",
-//       clues: [
-//         {question: "Hamlet Author", answer: "Shakespeare", showing: null},
-//         {question: "Bell Jar Author", answer: "Plath", showing: null}
-//       ],
-//     },
-//     { title: "Dogs",
-//       clues: [
-//         {question: "Hamlet Author", answer: "Shakespeare", showing: null},
-//         {question: "Bell Jar Author", answer: "Plath", showing: null}
-//       ],
-//     },{ title: "Violin",
-//     clues: [
-//       {question: "Hamlet Author", answer: "Shakespeare", showing: null},
-//       {question: "Bell Jar Author", answer: "Plath", showing: null}
-//     ],
-//   },{ title: "Food",
-//   clues: [
-//     {question: "Hamlet Author", answer: "Shakespeare", showing: null},
-//     {question: "Bell Jar Author", answer: "Plath", showing: null}
-//   ],
-// },
-
-   
-//   ]
+$('tbody').on('click', 'td', function(evt){
+    handleClick(evt);
+})
