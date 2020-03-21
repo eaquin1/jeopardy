@@ -1,3 +1,12 @@
+body {
+  max-width: 960px;
+  margin: auto;
+  text-align: center;
+}
+
+h1, p {
+  font-family: "Impact", sans-serif;
+}
 #jeopardy {
   text-align: center;
   font-size: 9pt;
@@ -27,4 +36,9 @@ td {
 
 td:hover {
   cursor: pointer;
+}
+
+#restart {
+  padding: 10px;
+  margin: 20px;
 }
