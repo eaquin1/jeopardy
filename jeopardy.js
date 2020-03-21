@@ -150,6 +150,7 @@ function handleClick(evt) {
 
 async function setupAndStart() {
     let getCatIds = await getCategoryIds();
+    categories = [];
     for (let id of getCatIds) {
         categories.push(await getCategory(id));
     }
@@ -158,11 +159,17 @@ async function setupAndStart() {
 }
 
 /** On click of restart button, restart game. */
-$('#restart').on('click', setupAndStart());
+$('#restart').on('click', async function() {
+    await setupAndStart()
+});
 
 
 
 /** On page load, setup and start & add event handler for clicking clues */
+$(window).on("load", async function(){
+    await setupAndStart();
+
 $('tbody').on('click', 'td', function(evt){
     handleClick(evt);
+    })
 })
