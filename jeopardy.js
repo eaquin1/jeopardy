@@ -18,9 +18,6 @@
 //    ...
 //  ]
 
-//Categories: http://jservice.io/api/categories?count=10&offset=6
-//Clues: http://jservice.io/api/clues?category=11544
-
 let categories = [];
 const NUM_CATEGORIES = 6;
 const NUM_CLUES = 5;
@@ -32,13 +29,13 @@ const NUM_CLUES = 5;
 
 async function getCategoryIds() {
     let random = Math.floor(Math.random() * 999);
-    let res = await axios.get(`http://jservice.io/api/categories?count=100&offset=${random}`);
-    
+    let res = await axios.get(`https://cors-anywhere.herokuapp.com/http://jservice.io/api/categories?count=100&offset=${random}`);
+
     let randomCategories = res.data.map(result => (
         result['id']
     ))
     let sampleCategories = _.sampleSize(randomCategories, NUM_CATEGORIES);
-   
+
     return sampleCategories;
 }
 
@@ -55,24 +52,22 @@ async function getCategoryIds() {
  */
 
 async function getCategory(catId) {
-    let res = await axios.get(`http://jservice.io/api/clues?category=${catId}`);
-    let catObj = {};
-    
+    let res = await axios.get(`https://cors-anywhere.herokuapp.com/http://jservice.io/api/clues?category=${catId}`);
+
     let clueArray = res.data.map(result => ({
         question: result.question,
         answer: result.answer,
         showing: null
     }))
-    
+
     let sampleClueArray = _.sampleSize(clueArray, NUM_CLUES);
-    catObj = {
+    return {
             title: res.data[0].category.title,
             clues: sampleClueArray
         }
-        
-    return catObj;
+
 }
-    
+
 
 /** Fill the HTML table#jeopardy with the categories & cells for questions.
  *
@@ -90,16 +85,17 @@ async function fillTable() {
     $tbody.empty();
 
     let $headerRow = $('<tr>');
-    
+
     for (let category of categories) {
         let $header = $(
             `<th>${category.title}</th>`
         );
         $headerRow.append($header);
     }
+
     $thead.append($headerRow);
 
-    
+    // fill cells in table
     for(let x = 0; x < NUM_CLUES; x++){
         let $clueRow = $('<tr>');
          for(let y = 0; y < NUM_CATEGORIES; y++) {
@@ -110,7 +106,6 @@ async function fillTable() {
         }
         $tbody.append($clueRow);
     }
-    
 }
 
 /** Handle clicking on a clue: show the question or answer.
@@ -127,14 +122,14 @@ function handleClick(evt) {
     let $clue = $(evt.target)
     let selectedCat = parseInt(id.slice(0, 1));
     let selectedQuestion = parseInt(id.slice(2));
-   
-    let showing =  categories[selectedCat].clues[selectedQuestion].showing;
-   
+
+    let showing =  categories[selectedCat].clues[selectedQuestion]["showing"];
+
     if(!showing){
-        $clue.text(categories[selectedCat].clues[selectedQuestion].question);
+        $clue.html(categories[selectedCat].clues[selectedQuestion].question);
         categories[selectedCat].clues[selectedQuestion]["showing"] = "question";
     } else if (showing === "question") {
-       $clue.text(categories[selectedCat].clues[selectedQuestion].answer);
+       $clue.html(categories[selectedCat].clues[selectedQuestion].answer);
        categories[selectedCat].clues[selectedQuestion]["showing"] = "answer";
     } else {
         return;
@@ -154,7 +149,7 @@ async function setupAndStart() {
     for (let id of getCatIds) {
         categories.push(await getCategory(id));
     }
-    
+
     fillTable();
 }
 
@@ -162,8 +157,6 @@ async function setupAndStart() {
 $('#restart').on('click', async function() {
     await setupAndStart()
 });
-
-
 
 /** On page load, setup and start & add event handler for clicking clues */
 $(window).on("load", async function(){
